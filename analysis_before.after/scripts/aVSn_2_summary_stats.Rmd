@@ -1,0 +1,193 @@
+---
+title: "Summary statistics - artificial vs. natural experiment"
+author: "Lisa Schunk"
+date: "`r Sys.time()`"
+output:
+  html_document:
+    df_print: paged
+---
+
+
+
+```{r Knitr Options, include=FALSE}
+	knitr::opts_chunk$set(comment=NA, message=FALSE, indent="", error=TRUE)
+
+```
+
+---
+
+
+# Goal of the script
+This script computes standard descriptive statistics for each group.  
+The groups are based on:
+
+* Raw material 
+* Cycle
+* Spots (replicas) 
+
+
+It computes the following statistics:  
+
+* n (sample size = `length`): number of measurements  
+* smallest value (`min`)  
+* largest value (`max`)
+* mean  
+* median  
+* standard deviation (`sd`)
+
+
+```{r}
+dir_in <- "analysis_before.after/derived_data/"
+dir_out <- "analysis_before.after/summary_stats/"
+
+```
+
+Raw data must be located in `r paste0("~/", dir_in)`.  
+Formatted data will be saved in `r paste0("~/", dir_out)`.
+The knit directory for this script is the project directory.
+---
+
+
+# Load packages
+```{r Libraries}
+pack_to_load <- c("R.utils", "tools", "openxlsx", "doBy")
+sapply(pack_to_load, library, character.only = TRUE, logical.return = TRUE)
+```
+
+
+---
+
+# Get names, path and information of all files 
+```{r}
+data_file <- list.files(dir_in, pattern = "\\.Rbin$", full.names = TRUE)
+md5_in <- md5sum(data_file)
+info_in <- data.frame(file = basename(names(md5_in)), checksum = md5_in, row.names = NULL)
+
+```
+
+
+The checksum (MD5 hashes) of the imported files are:  
+```{r, echo = FALSE}
+info_in
+
+```
+
+
+# Load data into R object
+```{r}
+imp_data <- loadObject(data_file)
+str(imp_data)
+
+```
+
+The imported file is: "`r paste0("~/", data_file)`"  
+
+
+---
+
+
+# Define numeric variables
+```{r}
+num.var <- 9:length(imp_data)
+
+```
+
+The following variables will be used: 
+
+```{r, echo=FALSE}
+for (i in num.var) cat("[",i,"] ", names(imp_data)[i], "\n", sep = "")
+
+```
+
+---
+
+
+# Compute summary statistics
+## Create function to compute the statistics at once
+```{r}
+nminmaxmeanmedsd <- function(x){
+	y <- x[!is.na(x)]
+	n_test <- length(y)
+	min_test <- min(y)
+	max_test <- max(y)
+	mean_test <- mean(y)
+ 	med_test <- median(y)
+ 	sd_test <- sd(y)
+ 	out <- c(n_test, min_test, max_test, mean_test, med_test, sd_test)
+ 	names(out) <- c("n", "min", "max", "mean", "median", "sd")
+ 	return(out)
+}
+
+```
+
+
+##  Compute the summary statistics in groups
+### Spots
+```{r}
+spot <- summaryBy(.~ Sample + Cycle + Contact.material, 
+        data = imp_data[c("Sample","Cycle", "Contact.material" ,   
+        names(imp_data)[num.var])], FUN = nminmaxmeanmedsd)
+str(spot)
+
+```
+
+
+### Contact material 
+```{r}
+contact.material <- summaryBy(.~ Contact.material + Raw.material + Cycle, 
+                    data = imp_data[c("Contact.material", "Raw.material", "Cycle",
+                    names(imp_data)[num.var])], FUN=nminmaxmeanmedsd)
+str(contact.material)
+
+```
+
+
+---
+
+# Save data
+## Format name of output file
+```{r}
+file_out <- "before.after_stats"
+
+```
+The file will be saved as "`r paste0("~/", dir_out, ".[ext]")`".
+
+
+## Write to XLSX
+```{r}
+write.xlsx(list(spot = spot, contact.material = contact.material), 
+           file = paste0(dir_out, file_out, ".xlsx"))
+
+```
+
+
+## Save R object
+```{r}
+saveObject(list(spot = spot, contact.material = contact.material), 
+           file = paste0(dir_out, file_out, ".Rbin"))
+
+```
+
+---
+
+
+# sessionInfo() and RStudio version
+
+```{r}
+sessionInfo()
+```
+
+RStudio version `r readLines("analysis_before.after/scripts/RStudioVersion.txt", n = 1)`.
+
+
+---
+
+# Cite R packages used
+```{r Citation}
+for (i in pack_to_load) print(citation(i), bibtex = FALSE)
+```
+
+
+---
+
+END OF SCRIPT

@@ -1,0 +1,700 @@
+---
+title: "Plots - artificial vs. natural experiment"
+author: "Lisa Schunk"
+date: "`r Sys.time()`"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+---
+
+
+```{r Knitr Options, include=FALSE}
+knitr::opts_chunk$set(comment=NA, message=FALSE, indent="", error=TRUE)
+
+```
+
+---
+
+
+# Goal of the script
+This script plots all variables to see which ones should be used for further analysis.  
+Scatterplot of each variable will be plotted.   
+
+
+
+```{r}
+dir_in <- "analysis_all.cycles/derived_data/"
+dir_out <- "analysis_all.cycles/plots"
+
+```
+
+Raw data must be located in `r paste0("~/", dir_in)`.  
+Formatted data will be saved in `r paste0("~/", dir_out)`.
+
+The knit directory for this script is the project directory.
+---
+
+# Load packages
+```{r Libraries}
+pack_to_load <- c("R.utils", "tools", "ggplot2", "doBy", "tidyverse", "patchwork", "ggsci")
+sapply(pack_to_load, library, character.only = TRUE, logical.return = TRUE)
+```
+
+
+---
+
+# Get name, path and information of the file 
+```{r}
+data_file <- list.files(dir_in, pattern = "\\.Rbin$", full.names = TRUE)
+md5_in <- md5sum(data_file)
+info_in <- data.frame(file = basename(names(md5_in)), checksum = md5_in, row.names = NULL)
+
+```
+
+
+The checksum (MD5 hashes) of the imported file is:  
+```{r, echo = FALSE}
+info_in
+
+```
+
+
+# Load data into R object
+```{r}
+imp_data <- loadObject(data_file)
+str(imp_data)
+
+
+# add another column which concatenates Sample and Spot 
+imp_data$ID <- paste(imp_data$Sample, imp_data$Spot)
+imp_data <- imp_data[c(1:3, 44, 4:43)]
+
+# copy the column Cycle and convert into numeric
+imp_data$Stroke <- paste(imp_data$Cycle) 
+imp_data[["Stroke"]] <- as.numeric(imp_data[["Stroke"]],levels=c("0", "50", "250", "1000",
+                        "2000"))
+
+```
+
+The imported file is: "`r paste0("~/", data_file)`"  
+
+
+---
+
+# Prepare variables
+## Define numeric variables
+```{r}
+num.var <- 10:44
+
+```
+
+The following variables will be used: 
+
+```{r, echo=FALSE}
+for (i in num.var) cat("[",i,"] ", names(imp_data)[i], "\n", sep="")
+
+```
+
+
+---
+
+
+# Plot each of the selected numeric variable 
+## Sorted by contact material 
+### artificial vs. natural bone: flint samples 
+```{r}
+
+flint <- filter(imp_data, Raw.material == "flint")
+
+
+for (i in num.var){
+ 
+ # get the min/max range of the data set
+ range_var <- range(flint[i]) 
+  
+    # plot bone plate
+    f_bp <- ggplot(flint[grep("bone plate", flint[["Contact.material"]]), ], 
+            aes_string(y = names(imp_data)[i], x = "Cycle")) +
+            geom_point(aes(shape = Spot, colour = Sample), size = 3) + 
+            labs(title = "flint - bone plate", y = names(imp_data)[i], x = "cycle") + 
+            coord_cartesian(ylim = range_var) +
+            guides(colour = "none") +
+            geom_line(aes(group = Spot,), colour = "#FAD510") +  
+            scale_colour_manual(values = "#FAD510") +
+            theme_classic() 
+
+    # plot cow scapula 
+    f_cs <- ggplot(flint[grep("cow scapula", flint[["Contact.material"]]), ], 
+            aes_string(y = names(imp_data)[i], x = "Cycle")) +
+            geom_point(aes(shape = Spot, colour = Sample), size = 3) +
+            labs(title = "flint - cow scapula", y = names(imp_data)[i], x = "cycle") + 
+            coord_cartesian(ylim = range_var) +
+            guides(colour = "none") +
+            scale_colour_manual(values = "#CB2314") +
+            geom_line(aes(group = Spot,), colour = "#CB2314") +
+            theme_classic() 
+
+	  # combine the flint plots 
+    f.bone <- f_bp + f_cs + plot_layout(width = c(3/6, 3/6), guides = 'collect')  
+       
+    print(f.bone)
+
+  # save to PDF
+	file_out <- paste0(file_path_sans_ext(info_in[["file"]]), "_f.bone_", names(imp_data)[i],
+	            ".pdf")
+	ggsave(filename = file_out, plot = f.bone, path = dir_out, device = "pdf")
+
+}
+
+```
+
+
+### artificial vs. natural bone: lydite samples 
+```{r}
+
+lydite <- filter(imp_data, Raw.material == "lydite")
+
+for (i in num.var){
+	
+  # get the min/max range of the data set
+  range_var <- range(lydite[i]) 
+  
+    # plot bone plate 
+    l_bp <- ggplot(lydite[grep("bone plate", lydite[["Contact.material"]]), ], 
+            aes_string(y = names(imp_data)[i], x = "Cycle")) +
+            geom_point(aes(shape = Spot, colour = Sample), size = 3) +
+            labs(title = "lydite - bone plate", y = names(imp_data)[i], x = "cycle") + 
+            coord_cartesian(ylim = range_var) +
+            guides(colour = "none") +
+            geom_line(aes(group = Spot,), colour = "#FAD510") +  
+            scale_colour_manual(values = "#FAD510") +
+            theme_classic() 
+    
+    # plot cow scapula 
+    l_cs <- ggplot(lydite[grep("cow scapula", lydite[["Contact.material"]]), ], 
+            aes_string(y = names(imp_data)[i], x = "Cycle")) +
+            geom_point(aes(shape = Spot, colour = Sample), size = 3) +
+            labs(title = "lydite - cow scapula", y = names(imp_data)[i], x = "cycle") + 
+            coord_cartesian(ylim = range_var) +
+            guides(colour = "none") +
+            scale_colour_manual(values = "#CB2314") +
+            geom_line(aes(group = Spot,), colour = "#CB2314") +
+            theme_classic() 
+
+	  # combine the lydite plots 
+    l.bone <- l_bp + l_cs + plot_layout(width = c(3/6, 3/6), guides = 'collect')  
+   
+     print(l.bone)
+ 
+  # save to PDF
+	file_out <- paste0(file_path_sans_ext(info_in[["file"]]), "_l.bone_", 
+	            names(imp_data)[i], ".pdf")
+	ggsave(filename = file_out, plot = l.bone, path = dir_out, device = "pdf")
+	
+
+}
+
+```
+ 
+ 
+### artificial vs. natural skin: flint samples 
+```{r}
+
+for (i in num.var){   
+	
+  # get the min/max range of the data set
+  range_var <- range(flint[i]) 
+  
+    # plot skin pad 
+    f_sp <- ggplot(flint[grep("skin pad", flint[["Contact.material"]]), ], 
+            aes_string(y = names(imp_data)[i], x = "Cycle")) +
+            geom_point(aes(shape = Spot, colour = Sample), size = 3) +
+            labs(title = "flint - skin pad", y = names(imp_data)[i], x = "cycle") + 
+            coord_cartesian(ylim = range_var) +
+            guides(colour = "none") +
+            geom_line(aes(group = Spot,), colour = "#046C9A") + 
+            scale_colour_manual(values = "#046C9A") +
+            theme_classic()  
+
+    # plot pig skin 
+    f_ps <- ggplot(flint[grep("pig skin", flint[["Contact.material"]]), ], 
+            aes_string(y = names(imp_data)[i], x = "Cycle")) +
+            geom_point(aes(shape = Spot, colour = Sample), size = 3) +
+            labs(title = "flint - pig skin", y = names(imp_data)[i], x = "cycle") + 
+            coord_cartesian(ylim = range_var) +
+            guides(colour = "none") +
+            scale_colour_manual(values = "#52854c") +
+            geom_line(aes(group = Spot,), colour = "#52854c") +
+            theme_classic() 
+
+	  # combine the flint and the lydite plots 
+    f.skin <- f_sp + f_ps + plot_layout(width = c(3/6, 3/6), guides = 'collect')  
+       
+    print(f.skin)
+
+  # save to PDF
+	file_out <- paste0(file_path_sans_ext(info_in[["file"]]), "_f.skin_", 
+	            names(imp_data)[i], ".pdf")
+	ggsave(filename = file_out, plot = f.skin, path = dir_out, device = "pdf")
+
+}
+
+```
+
+
+### artificial vs. natural skin: lydite samples 
+```{r}
+
+for (i in num.var){
+	
+  # get the min/max range of the data set
+  range_var <- range(lydite[i]) 
+  
+    # plot skin pad 
+    l_sp <- ggplot(lydite[grep("skin pad", lydite[["Contact.material"]]), ], 
+            aes_string(y = names(imp_data)[i], x = "Cycle")) +
+            geom_point(aes(shape = Spot, colour = Sample), size = 3) + 
+            labs(title = "lydite - skin pad", y = names(imp_data)[i], x = "cycle") + 
+            coord_cartesian(ylim = range_var) +
+            guides(colour = "none") +
+            geom_line(aes(group = Spot,), colour = "#046C9A") + 
+            scale_colour_manual(values = "#046C9A") +
+            theme_classic()
+
+    # plot pig skin 
+    l_ps <- ggplot(lydite[grep("pig skin", lydite[["Contact.material"]]), ], 
+            aes_string(y = names(imp_data)[i], x = "Cycle")) +
+            geom_point(aes(shape = Spot, colour = Sample), size = 3) +
+            labs(title = "lydite - pig skin", y = names(imp_data)[i], x = "cycle") + 
+            coord_cartesian(ylim = range_var) +
+            guides(colour = "none") +
+            scale_colour_manual(values = "#52854c") +
+            geom_line(aes(group = Spot,), colour = "#52854c") +
+            theme_classic()
+
+	  # combine the flint and the lydite plots 
+    l.skin <- l_sp + l_ps + plot_layout(width = c(3/6, 3/6), guides = 'collect')  
+    print(l.skin)
+
+
+  # save to PDF
+	file_out <- paste0(file_path_sans_ext(info_in[["file"]]), "_l.skin_", names(imp_data)[i],
+	            ".pdf")
+	ggsave(filename = file_out, plot = l.skin, path = dir_out, device = "pdf")
+
+
+}
+
+```
+
+
+
+# Plot the mean value (3 measurements) of each of the selected numeric variable 
+## Sorted by contact material 
+### cow scapula & bone plate: Sq
+```{r}
+# remove possible outliers (based on values and prior plots)
+imp_data2 <- imp_data[-c(1, 4, 7, 10, 13, 18, 32, 47, 75), ]
+
+# add a column that combines sample and cycle
+ID.cycle <- unite(imp_data2, ID_Cycle, c(Sample, Cycle), remove = FALSE)
+
+# compute the mean of the three spots per sample 
+mean_cycle <- summaryBy(.~ ID_Cycle + Sample + Stroke + Raw.material + Contact.material, 
+                         data = ID.cycle, FUN = mean)
+
+# define new num.var for mean_cycle 
+num.var2 <- 6:length(mean_cycle)
+for (j in num.var2) cat("[",j,"] ", names(mean_cycle)[j], "\n", sep="")
+
+     # plot bone plate 
+     Sq.bp <- ggplot(mean_cycle[grep("bone plate", mean_cycle[["Contact.material"]]), ], 
+              aes_string(y = "Sq.mean", x = "Stroke")) +
+              geom_point(aes(colour = Sample), size = 3) +
+              geom_line(aes(group = Sample)) +  
+              scale_x_continuous(breaks = c(0, 50, 250, 1000, 2000)) +
+              labs(title = "bone plate", y = NULL, x = "cycle") + 
+              coord_cartesian(ylim = c(0, 7000)) + 
+              scale_colour_manual(values = c("#FAD50F", "#FAD50F")) +
+              theme_classic() 
+    
+    # plot cow scapula 
+    Sq.cs <- ggplot(mean_cycle[grep("cow scapula", mean_cycle[["Contact.material"]]), ],
+             aes_string(y = "Sq.mean", x = "Stroke")) +
+             geom_point(aes(colour = Sample), size = 3) +
+             geom_line(aes(group = Sample)) +
+             scale_x_continuous(breaks = c(0, 50, 250, 1000, 2000)) + 
+             coord_cartesian(ylim = c(0, 7000)) +
+             labs(title = "cow scapula", y = "ΔSq [nm]", x = "cycle") + 
+             scale_colour_manual(values = c("#CB2213", "#CB2213")) +
+             theme_classic() 
+
+
+ 	 # combine the plots 
+   Sq.bone.mean <- Sq.cs + Sq.bp + plot_layout(width = c(3/6, 3/6), guides = 'collect')  
+       
+   print(Sq.bone.mean)
+
+  # save to PDF
+	file_out <- paste0(file_path_sans_ext(info_in[["file"]]), "_Sq.bone.mean", ".pdf")
+	ggsave(filename = file_out, plot = Sq.bone.mean, path = dir_out, device = "pdf", 
+	       width = 350, height = 270, units = "mm")
+
+
+```
+
+
+### pig skin & skin pad: Sq
+```{r}
+  Sq.sp <- ggplot(mean_cycle[grep("skin pad", mean_cycle[["Contact.material"]]), ],
+           aes_string(y = "Sq.mean", x = "Stroke")) +
+           geom_point(aes(colour = Sample), size = 3) +
+           geom_line(aes(group = Sample)) +
+           scale_x_continuous(breaks = c(0, 50, 250, 1000, 2000)) +
+           labs(title = "skin pad", y = NULL, x = "cycle") + 
+           coord_cartesian(ylim = c(0, 6000)) +  
+           scale_colour_manual(values = c("#52854B", "#52854B")) +
+           theme_classic() 
+
+    Sq.ps <- ggplot(mean_cycle[grep("pig skin", mean_cycle[["Contact.material"]]), ],
+             aes_string(y = "Sq.mean", x = "Stroke")) +
+             geom_point(aes(colour = Sample), size = 3) +
+             geom_line(aes(group = Sample)) +
+             scale_x_continuous(breaks = c(0, 50, 250, 1000, 2000)) +
+             coord_cartesian(ylim = c(0, 6000)) +
+             labs(title = "pig skin", y = "ΔSq [nm]", x = "cycle") + 
+             scale_colour_manual(values = c("#036C9A", "#036C9A")) +
+             theme_classic() 
+
+	  # combine the plots 
+    Sq.skin.mean <- Sq.ps + Sq.sp + plot_layout(width = c(3/6, 3/6), guides = 'collect')  
+       
+    print(Sq.skin.mean)
+
+  # save to PDF
+	file_out <- paste0(file_path_sans_ext(info_in[["file"]]), "_Sq.skin.mean", ".pdf")
+	ggsave(filename = file_out, plot = Sq.skin.mean, path = dir_out, device = "pdf", 
+	       width = 350, height = 270, units = "mm")
+
+```
+
+
+### cow scapula & bone plate: Vmc
+```{r}
+
+     Vmc.bp <- ggplot(mean_cycle[grep("bone plate", mean_cycle[["Contact.material"]]), ],
+               aes_string(y = "Vmc.mean", x = "Stroke")) +
+               geom_point(aes(colour = Sample), size = 3) +
+               geom_line(aes(group = Sample)) +
+               scale_x_continuous(breaks = c(0, 50, 250, 1000, 2000)) +                 
+               labs(title = "bone plate", y = NULL, x = "cycle") + 
+               coord_cartesian(ylim = c(0, 3.5)) + 
+               scale_colour_manual(values = c("#FAD50F", "#FAD50F")) +
+               theme_classic() 
+
+     Vmc.cs <- ggplot(mean_cycle[grep("cow scapula", mean_cycle[["Contact.material"]]), ],
+              aes_string(y = "Vmc.mean", x = "Stroke")) +
+              geom_point(aes(colour = Sample), size = 3) +
+              geom_line(aes(group = Sample)) +
+              scale_x_continuous(breaks = c(0, 50, 250, 1000, 2000)) + 
+              coord_cartesian(ylim = c(0, 3.5)) +
+              labs(title = "cow scapula", y = "Vmc [µm³/µm²]", x = "cycle") + 
+              scale_colour_manual(values = c("#CB2213", "#CB2213")) +
+              theme_classic() 
+
+     # combine the plots 
+     Vmc.bone.mean <- Vmc.cs + Vmc.bp + plot_layout(width = c(3/6, 3/6), guides = 'collect')  
+     print(Vmc.bone.mean)
+
+  # save to PDF
+	file_out <- paste0(file_path_sans_ext(info_in[["file"]]), "_Vmc.bone.mean", ".pdf")
+	ggsave(filename = file_out, plot = Vmc.bone.mean, path = dir_out, device = "pdf", 
+	       width = 350, height = 270, units = "mm")
+
+
+```
+
+
+### pig skin & skin pad: Vmc
+```{r}
+  Vmc.sp <- ggplot(mean_cycle[grep("skin pad", mean_cycle[["Contact.material"]]), ],
+            aes_string(y = "Vmc.mean", x = "Stroke")) +
+            geom_point(aes(colour = Sample), size = 3) +
+            geom_line(aes(group = Sample)) +
+            scale_x_continuous(breaks = c(0, 50, 250, 1000, 2000)) +
+            labs(title = "skin pad", y = NULL, x = "cycle") + 
+            coord_cartesian(ylim = c(0, 3.5)) +  
+            scale_colour_manual(values = c("#52854B", "#52854B")) + 
+            theme_classic() 
+
+    Vmc.ps <- ggplot(mean_cycle[grep("pig skin", mean_cycle[["Contact.material"]]), ],
+              aes_string(y = "Vmc.mean", x = "Stroke")) +
+              geom_point(aes(colour = Sample), size = 3) +
+              geom_line(aes(group = Sample)) +
+              scale_x_continuous(breaks = c(0, 50, 250, 1000, 2000)) +
+              coord_cartesian(ylim = c(0, 3.5)) +
+              labs(title = "pig skin", y = "Vmc [µm³/µm²]", x = "cycle") + 
+              scale_colour_manual(values = c("#036C9A", "#036C9A")) +
+              theme_classic() 
+
+  	# combine the plots 
+    Vmc.skin.mean <- Vmc.ps + Vmc.sp + plot_layout(width = c(3/6, 3/6), guides = 'collect')  
+    print(Vmc.skin.mean)
+
+  # save to PDF
+	file_out <- paste0(file_path_sans_ext(info_in[["file"]]), "_Vmc.skin.mean", ".pdf")
+	ggsave(filename = file_out, plot = Vmc.skin.mean, path = dir_out, device = "pdf", 
+	       width = 350, height = 270, units = "mm")
+
+```
+
+
+### cow scapula & bone plate: HAsfc9
+```{r}
+
+     HAsfc9.bp <- ggplot(mean_cycle[grep("bone plate", mean_cycle[["Contact.material"]]), ],
+                  aes_string(y = "HAsfc9.mean", x = "Stroke")) +
+                  geom_point(aes(colour = Sample), size = 3) +
+                  geom_line(aes(group = Sample)) +
+                  scale_x_continuous(breaks = c(0, 50, 250, 1000, 2000)) +
+                  labs(title = "bone plate", y = NULL, x = "cycle") + 
+                  coord_cartesian(ylim = c(0.0, 11.0)) +
+                  scale_colour_manual(values = c("#FAD50F", "#FAD50F")) +
+                 theme_classic() 
+
+    HAsfc9.cs <- ggplot(mean_cycle[grep("cow scapula", mean_cycle[["Contact.material"]]), ],
+                 aes_string(y = "HAsfc9.mean", x = "Stroke")) +
+                 geom_point(aes(colour = Sample), size = 3) +
+                 geom_line(aes(group = Sample)) +
+                 scale_x_continuous(breaks = c(0, 50, 250, 1000, 2000)) +
+                 coord_cartesian(ylim = c(0.0, 11.0)) +
+                 labs(title = "cow scapula", y = "HAsfc9", x = "cycle") + 
+                 scale_colour_manual(values = c("#CB2213", "#CB2213")) +
+                 theme_classic() 
+
+	  # combine the plots 
+    HAsfc9.bone.mean <- HAsfc9.cs + HAsfc9.bp + plot_layout(width = c(3/6, 3/6), 
+                        guides = 'collect')  
+       
+    print(HAsfc9.bone.mean)
+
+  # save to PDF
+	file_out <- paste0(file_path_sans_ext(info_in[["file"]]), "_HAsfc9.bone.mean", ".pdf")
+	ggsave(filename = file_out, plot = HAsfc9.bone.mean, path = dir_out, device = "pdf", 
+	       width = 350, height = 270, units = "mm")
+
+
+```
+
+
+### pig skin & skin pad: HAsfc9
+```{r}
+  HAsfc9.sp <- ggplot(mean_cycle[grep("skin pad", mean_cycle[["Contact.material"]]), ],
+               aes_string(y = "HAsfc9.mean", x = "Stroke")) +
+               geom_point(aes(colour = Sample), size = 3) +
+               geom_line(aes(group = Sample)) +
+               scale_x_continuous(breaks = c(0, 50, 250, 1000, 2000)) + 
+               labs(title = "skin pad", y = NULL, x = "cycle") + 
+               coord_cartesian(ylim = c(0.0, 11.0)) +  
+               scale_colour_manual(values = c("#52854B", "#52854B")) +
+               theme_classic() 
+
+
+    HAsfc9.ps <- ggplot(mean_cycle[grep("pig skin", mean_cycle[["Contact.material"]]), ],
+                 aes_string(y = "HAsfc9.mean", x = "Stroke")) +
+                 geom_point(aes(colour = Sample), size = 3) +
+                 geom_line(aes(group = Sample)) +
+                 scale_x_continuous(breaks = c(0, 50, 250, 1000, 2000)) +
+                 coord_cartesian(ylim = c(0.0, 11.0)) +
+                 labs(title = "pig skin", y = "HAsfc9", x = "cycle") + 
+                 scale_colour_manual(values = c("#036C9A", "#036C9A")) +
+                theme_classic() 
+
+  	# combine the plots 
+    HAsfc9.skin.mean <- HAsfc9.ps + HAsfc9.sp + plot_layout(width = c(3/6, 3/6), guides =
+                      'collect')  
+       
+    print(HAsfc9.skin.mean)
+  
+  # save to PDF
+	file_out <- paste0(file_path_sans_ext(info_in[["file"]]), "_HAsfc9.skin.mean", ".pdf")
+	ggsave(filename = file_out, plot = HAsfc9.skin.mean, path = dir_out, device = "pdf", 
+	       width = 350, height = 270, units = "mm")
+
+```
+
+
+### cow scapula & bone plate: epLsar
+```{r}
+
+     epLsar.bp <- ggplot(mean_cycle[grep("bone plate", mean_cycle[["Contact.material"]]), ],
+                  aes_string(y = "epLsar.mean", x = "Stroke")) +
+                  geom_point(aes(colour = Sample), size = 3) +
+                  geom_line(aes(group = Sample)) +
+                  scale_x_continuous(breaks = c(0, 50, 250, 1000, 2000)) +
+                  labs(title = "bone plate", y = NULL, x = "cycle") + 
+                  coord_cartesian(ylim = c(0.000, 0.005)) +
+                  scale_colour_manual(values = c("#FAD50F", "#FAD50F")) +
+                 theme_classic() 
+
+    epLsar.cs <- ggplot(mean_cycle[grep("cow scapula", mean_cycle[["Contact.material"]]), ],
+                 aes_string(y = "epLsar.mean", x = "Stroke")) +
+                 geom_point(aes(colour = Sample), size = 3) +
+                 geom_line(aes(group = Sample)) +
+                 scale_x_continuous(breaks = c(0, 50, 250, 1000, 2000)) +
+                 coord_cartesian(ylim = c(0.000, 0.005)) +
+                 labs(title = "cow scapula", y = "epLsar", x = "cycle") + 
+                 scale_colour_manual(values = c("#CB2213", "#CB2213")) +
+                 theme_classic() 
+
+	  # combine the plots 
+    epLsar.bone.mean <- epLsar.cs + epLsar.bp + plot_layout(width = c(3/6, 3/6), 
+                        guides = 'collect')  
+       
+    print(epLsar.bone.mean)
+
+  # save to PDF
+	file_out <- paste0(file_path_sans_ext(info_in[["file"]]), "_epLsar.bone.mean", ".pdf")
+	ggsave(filename = file_out, plot = epLsar.bone.mean, path = dir_out, device = "pdf", 
+	       width = 350, height = 270, units = "mm")
+
+
+```
+
+
+### pig skin & skin pad: epLsar
+```{r}
+  epLsar.sp <- ggplot(mean_cycle[grep("skin pad", mean_cycle[["Contact.material"]]), ],
+               aes_string(y = "epLsar.mean", x = "Stroke")) +
+               geom_point(aes(colour = Sample), size = 3) +
+               geom_line(aes(group = Sample)) +
+               scale_x_continuous(breaks = c(0, 50, 250, 1000, 2000)) + 
+               labs(title = "skin pad", y = NULL, x = "cycle") + 
+               coord_cartesian(ylim = c(0.000, 0.005)) +  
+               scale_colour_manual(values = c("#52854B", "#52854B")) +
+               theme_classic() 
+
+    epLsar.ps <- ggplot(mean_cycle[grep("pig skin", mean_cycle[["Contact.material"]]), ],
+                 aes_string(y = "epLsar.mean", x = "Stroke")) +
+                 geom_point(aes(colour = Sample), size = 3) +
+                 geom_line(aes(group = Sample)) +
+                 scale_x_continuous(breaks = c(0, 50, 250, 1000, 2000)) +
+                 coord_cartesian(ylim = c(0.000, 0.005)) +
+                 labs(title = "pig skin", y = "epLsar", x = "cycle") + 
+                 scale_colour_manual(values = c("#036C9A", "#036C9A")) +
+                 theme_classic() 
+
+	  # combine the plots 
+    epLsar.skin.mean <- epLsar.ps + epLsar.sp + plot_layout(width = c(3/6, 3/6), 
+                        guides = 'collect')  
+       
+  # save to PDF
+	file_out <- paste0(file_path_sans_ext(info_in[["file"]]), "_epLsar.skin.mean", ".pdf")
+	ggsave(filename = file_out, plot = epLsar.skin.mean, path = dir_out, device = "pdf", 
+	       width = 350, height = 270, units = "mm")
+
+```
+
+
+### cow scapula & bone plate: Asfc
+```{r}
+
+     Asfc.bp <- ggplot(mean_cycle[grep("bone plate", mean_cycle[["Contact.material"]]), ],
+                aes_string(y = "Asfc.mean", x = "Stroke")) +
+                geom_point(aes(colour = Sample), size = 3) +
+                geom_line(aes(group = Sample)) +
+                scale_x_continuous(breaks = c(0, 50, 250, 1000, 2000)) +
+                labs(title = "bone plate", y = NULL, x = "cycle") + 
+                coord_cartesian(ylim = c(0, 35)) +
+                scale_colour_manual(values = c("#FAD50F", "#FAD50F")) +
+                theme_classic() 
+
+    Asfc.cs <- ggplot(mean_cycle[grep("cow scapula", mean_cycle[["Contact.material"]]), ],
+               aes_string(y = "Asfc.mean", x = "Stroke")) +
+               geom_point(aes(colour = Sample), size = 3) +
+               geom_line(aes(group = Sample)) +
+               scale_x_continuous(breaks = c(0, 50, 250, 1000, 2000)) + 
+               coord_cartesian(ylim = c(0, 35)) +
+               labs(title = "cow scapula", y = "Asfc", x = "cycle") + 
+               scale_colour_manual(values = c("#CB2213", "#CB2213")) +
+               theme_classic() 
+
+  	# combine the plots 
+    Asfc.bone.mean <- Asfc.cs + Asfc.bp + plot_layout(width = c(3/6, 3/6), 
+                      guides = 'collect')  
+       
+    print(Asfc.bone.mean)
+
+  # save to PDF
+	file_out <- paste0(file_path_sans_ext(info_in[["file"]]), "_Asfc.bone.mean", ".pdf")
+	ggsave(filename = file_out, plot = Asfc.bone.mean, path = dir_out, device = "pdf", 
+	       width = 350, height = 270, units = "mm")
+
+
+```
+
+
+### cow scapula & bone plate: Asfc
+```{r}
+  Asfc.sp <- ggplot(mean_cycle[grep("skin pad", mean_cycle[["Contact.material"]]), ],
+             aes_string(y = "Asfc.mean", x = "Stroke")) +
+             geom_point(aes(colour = Sample), size = 3) +
+             geom_line(aes(group = Sample)) +
+             scale_x_continuous(breaks = c(0, 50, 250, 1000, 2000)) +
+             labs(title = "skin pad", y = NULL, x = "cycle") + 
+             coord_cartesian(ylim = c(0, 35)) + 
+             scale_colour_manual(values = c("#52854B", "#52854B")) +
+             theme_classic() 
+
+    Asfc.ps <- ggplot(mean_cycle[grep("pig skin", mean_cycle[["Contact.material"]]), ],
+               aes_string(y = "Asfc.mean", x = "Stroke")) +
+               geom_point(aes(colour = Sample), size = 3) +
+               geom_line(aes(group = Sample)) +
+               scale_x_continuous(breaks = c(0, 50, 250, 1000, 2000)) + 
+               coord_cartesian(ylim = c(0, 35)) +
+               labs(title = "pig skin", y = "Asfc", x = "cycle") + 
+               scale_colour_manual(values = c("#036C9A", "#036C9A")) +
+               theme_classic() 
+
+	  # combine the plots 
+    Asfc.skin.mean <- Asfc.ps + Asfc.sp + plot_layout(width = c(3/6, 3/6), 
+                      guides = 'collect')  
+       
+    print(Asfc.skin.mean)
+
+  # save to PDF
+	file_out <- paste0(file_path_sans_ext(info_in[["file"]]), "_Asfc.skin.mean", ".pdf")
+	ggsave(filename = file_out, plot = Asfc.skin.mean, path = dir_out, device = "pdf", 
+	       width = 350, height = 270, units = "mm")
+
+```
+
+
+
+---
+
+
+# sessionInfo() and RStudio version
+
+```{r}
+sessionInfo()
+```
+
+RStudio version `r readLines("analysis_all.cycles/scripts/RStudioVersion.txt", n = 1)`.
+
+
+---
+
+# Cite R packages used
+```{r Citation}
+for (i in pack_to_load) print(citation(i), bibtex = FALSE)
+```
+
+
+
+---
+
+END OF SCRIPT

@@ -1,0 +1,917 @@
+---
+title: "Plots - artificial vs. natural experiment"
+author: "Lisa Schunk"
+date: "`r Sys.time()`"
+output:
+  html_document:
+    df_print: paged
+---
+
+---
+
+
+```{r Knitr Options, include=FALSE}
+knitr::opts_chunk$set(comment=NA, message=FALSE, indent="", error=TRUE)
+
+```
+
+---
+
+
+# Goal of the script
+This script plots all variables to see which ones should be used for further analysis.  
+
+
+
+```{r}
+dir_in <- "analysis_before.after/derived_data/"
+dir_out <- "analysis_before.after/plots"
+
+```
+
+Raw data must be located in `r paste0("~/", dir_in)`.  
+Formatted data will be saved in `r paste0("~/", dir_out)`.
+
+The knit directory for this script is the project directory.
+---
+
+
+# Load packages
+```{r Libraries}
+pack_to_load <- c("R.utils", "tools", "ggplot2", "doBy", "tidyverse", "patchwork", 
+                "ggsci", "ggfortify")
+sapply(pack_to_load, library, character.only = TRUE, logical.return = TRUE)
+```
+
+
+---
+
+# Get name, path and information of the file 
+```{r}
+data_file <- list.files(dir_in, pattern = "\\.Rbin$", full.names = TRUE)
+md5_in <- md5sum(data_file)
+info_in <- data.frame(file = basename(names(md5_in)), checksum = md5_in, 
+           row.names = NULL)
+
+```
+
+
+The checksum (MD5 hashes) of the imported file is:  
+```{r, echo = FALSE}
+info_in
+
+```
+
+
+# Load data into R object
+```{r}
+imp_data <- loadObject(data_file)
+str(imp_data)
+
+```
+
+The imported file is: "`r paste0("~/", data_file)`"  
+
+
+---
+
+# Prepare variables
+## Define numeric variables
+```{r}
+num.var <- 9:length(imp_data)
+
+```
+
+
+The following variables will be used: 
+
+
+```{r, echo=FALSE}
+for (i in num.var) cat("[",i,"] ", names(imp_data)[i], "\n", sep="")
+
+```
+
+
+---
+
+
+# Calculate and plot the absolute difference for each sample and each parameter 
+## Sorted by contact material 
+### pig skin & skin pad  
+```{r}
+# add another coloum which concatenates Sample and Spot 
+imp_data$ID <- paste(imp_data$Sample, imp_data$Spot)
+
+diff_data <- imp_data[-(6:8)] %>% 
+  pivot_wider(names_from = Cycle, values_from = all_of(names(imp_data)[num.var]))
+
+
+output_list <- vector(mode = "list", length = length(names(imp_data)[num.var]))
+names(output_list) <- paste0(names(imp_data)[num.var], ".diff")
+
+for (i in seq_along(num.var)){
+  temp <- select(diff_data, starts_with(paste0(names(imp_data[num.var])[i], "_")))
+  output_list[[i]] <- unlist(select(temp, contains("2000")) - select(temp, 
+                      contains("before")))
+}
+
+var.diff <- as.data.frame(output_list)
+
+# create a data frame with the differences from before and after as values 
+difference <- as.data.frame(cbind(select(diff_data, Sample:ID), var.diff))
+row.names(difference) <- NULL
+
+
+# define numeric variable 
+num.var2 <- 6:length(difference)
+# the following variables will be used: 
+for (j in num.var2) cat("[",j,"] ", names(difference)[j], "\n", sep="")
+
+
+for (j in num.var2){
+  
+  # get the min/max range of the data set
+  range_var <- range(difference[j])  
+  # plot pig skin 
+  p_dif_skin <- ggplot(data = difference[grep("pig skin", difference[["Contact.material"]]),
+                ], aes_string(x = "Spot", names(difference)[j], colour = "Sample")) + 
+	              geom_jitter(size = 3, width = 0.25) +
+                theme(legend.position = "none") +
+                coord_cartesian(ylim = range_var) +
+	              facet_wrap(Sample ~ Contact.material, nrow = 2) + 
+                labs(title = "natural contact material") + 
+                ylab(names(difference)[j]) + xlab(NULL) +
+	              labs(y = gsub("\\.", " ", names(difference)[j])) +
+	              scale_colour_futurama() +
+	              theme_classic()
+
+   # plot skin pad 
+   p_dif_skin.pad <- ggplot(data = difference[grep("skin pad",
+                     difference[["Contact.material"]]), ], aes_string(x = "Spot",    
+                     names(difference)[j], 
+	                   colour = "Sample")) + 
+	                   geom_jitter(size = 3, width = 0.25) +
+                     theme(legend.position = "none") +
+                     coord_cartesian(ylim = range_var) +
+	                   facet_wrap(Sample ~ Contact.material, nrow = 2) + 
+                     labs(title = "artificial contact material") + 
+                     ylab(names(difference)[j]) + xlab(NULL) +
+	                   labs(y = gsub("\\.", " ", names(difference)[j])) +
+	                   scale_colour_futurama() +
+	                   theme_classic()
+
+	# combine both plots 
+  p_dif.skin <- p_dif_skin + p_dif_skin.pad + plot_layout(width = c(3/6, 3/6), 
+                guides = 'collect')  
+  print(p_dif.skin)
+
+  # save to PDF
+	file_out <- paste0(file_path_sans_ext(info_in[["file"]]), "_skin_", names(difference)[j],
+	            ".pdf")
+	ggsave(filename = file_out, plot = p_dif.skin, path = dir_out, device = "pdf", 
+	       width = 300, height = 170, units = "mm")
+
+}
+
+```
+
+# cow scapula & bone plate 
+```{r}
+for (j in num.var2){
+ # get the min/max range of the data set
+ range_var <- range(difference[j])  
+  
+  # plot cow scapula 
+  p_dif_bone <- ggplot(data = difference[grep("cow scapula",   
+                difference[["Contact.material"]]), ], aes_string(x = "Spot", 
+                names(difference)[j], colour = "Sample")) + 
+	              geom_jitter(size = 3, width = 0.25) +
+                theme(legend.position = "none") +
+                coord_cartesian(ylim = range_var) +
+	              facet_wrap(Sample ~ Contact.material, nrow = 2) + 
+                labs(title = "natural contact material") + 
+                ylab(names(difference)[j]) + xlab(NULL) +
+	              labs(y = gsub("\\.", " ", names(difference)[j])) +
+	              scale_colour_futurama() +
+	              theme_classic()
+ 
+   # plot bone plate 
+   p_dif_bone.plate <- ggplot(data = difference[grep("bone plate", 
+                       difference[["Contact.material"]]), ], aes_string(x = "Spot", 
+                       names(difference)[j], colour = "Sample")) + 
+	                     geom_jitter(size = 3, width = 0.25) +
+                       theme(legend.position = "none") +
+                       coord_cartesian(ylim = range_var) +
+	                     facet_wrap(Sample ~ Contact.material, nrow = 2) + 
+                       labs(title = "artificial contact material") + 
+                       ylab(names(difference)[j]) + xlab(NULL) +
+	                     labs(y = gsub("\\.", " ", names(difference)[j])) +
+	                     scale_colour_futurama() +
+	                     theme_classic()
+ 
+	# combine both plots 
+  p_dif.bone <- p_dif_bone + p_dif_bone.plate + plot_layout(width = c(3/6, 3/6),
+                guides = 'collect')  
+  print(p_dif.bone)
+
+  # save to PDF
+	file_out <- paste0(file_path_sans_ext(info_in[["file"]]), "_bone_", names(difference)[j],
+	            ".pdf")
+	ggsave(filename = file_out, plot = p_dif.bone, path = dir_out, device = "pdf", 
+	       width = 300, height = 170, units = "mm")
+
+}
+```
+
+
+# Calculate and plot the absolute difference for each sample and each parameter as mean value
+## sorted by contact material 
+### cow scapula & bone plate 
+```{r}
+# compute the mean of the three spots per sample 
+mean.sample <- summaryBy(.~ Sample + Raw.material + Contact.material, 
+               data = difference, FUN = mean)
+# define new num.var for mean_cycle 
+num.var3 <- 4:length(mean.sample)
+
+
+# the following variables will be used: 
+for (k in num.var3) cat("[",k,"] ", names(difference)[k], "\n", sep="")
+
+ 
+for (k in num.var3){
+  # get the min/max range of the data set
+  range_var <- range(mean.sample[k])  
+  # plot cow scapula
+  bone.mean <- ggplot(data = mean.sample[grep("cow scapula", 
+               mean.sample[["Contact.material"]]), ], aes_string(x = "Sample", 
+               names(mean.sample)[k], colour = "Sample")) + 
+               geom_point(size = 4) +
+               coord_cartesian(ylim = range_var) +
+	             facet_wrap(Sample ~ Contact.material, nrow = 2) + 
+               labs(title = "natural contact material") + 
+               ylab(names(mean.sample)[j]) + xlab(NULL) +
+	             labs(y = gsub("\\.", " ", names(mean.sample)[k])) +
+	             scale_colour_futurama() +
+	             theme_classic() +
+               theme(legend.position = "none") +
+               theme(axis.text.x = element_blank(),axis.ticks = element_blank())  
+	            
+   # plot bone plate 
+   plate.mean <- ggplot(data = mean.sample[grep("bone plate",
+                 mean.sample[["Contact.material"]]), ], aes_string(x = "Sample",
+                 names(mean.sample)[k], colour = "Sample")) + 
+	               geom_point(size = 4) +
+                 coord_cartesian(ylim = range_var) +
+	               facet_wrap(Sample ~ Contact.material, nrow = 2) + 
+                 labs(title = "artificial contact material") + 
+                 ylab(names(mean.sample)[j]) + xlab(NULL) +
+	               labs(y = gsub("\\.", " ", names(mean.sample)[k])) +
+	               scale_colour_futurama() +
+	               theme_classic() +
+                 theme(legend.position = "none") +
+                 theme(axis.text.x = element_blank(),axis.ticks = element_blank())  
+
+
+	# combine both plots 
+  bone.plate.mean <- bone.mean + plate.mean + plot_layout(width = c(3/6, 3/6),
+                     guides = 'collect')  
+  print(bone.plate.mean)
+
+  # save to PDF
+	file_out <- paste0(file_path_sans_ext(info_in[["file"]]), "_bone_", names(mean.sample)[k],
+	            ".pdf")
+	ggsave(filename = file_out, plot = bone.plate.mean, path = dir_out, device = "pdf", 
+	       width = 300, height = 170, units = "mm")
+
+} 
+ 
+
+```
+
+
+### pig skin & skin pad  
+```{r}
+
+  # plot skin
+for (k in num.var3){
+  # get the min/max range of the data set
+  range_var <- range(mean.sample[k])  
+
+  skin.mean <- ggplot(data = mean.sample[grep("pig skin", 
+               mean.sample[["Contact.material"]]), ], aes_string(x = "Sample", 
+               names(mean.sample)[k], colour = "Sample")) + 
+               geom_point(size = 4) +
+               coord_cartesian(ylim = range_var) +
+	             facet_wrap(Sample ~ Contact.material, nrow = 2) + 
+               labs(title = "natural contact material") + 
+               ylab(names(mean.sample)[j]) + xlab(NULL) +
+	             labs(y = gsub("\\.", " ", names(mean.sample)[k])) +
+	             scale_colour_futurama() +
+	             theme_classic() +
+               theme(legend.position = "none") +
+               theme(axis.text.x = element_blank(),axis.ticks = element_blank())  
+ 
+   # plot skin pad 
+   pad.mean <- ggplot(data = mean.sample[grep("skin pad",
+               mean.sample[["Contact.material"]]), ], aes_string(x = "Sample",
+               names(mean.sample)[k], colour = "Sample")) + 
+	             geom_point(size = 4) +
+               coord_cartesian(ylim = range_var) +
+	             facet_wrap(Sample ~ Contact.material, nrow = 2) + 
+               labs(title = "artificial contact material") + 
+               ylab(names(mean.sample)[j]) + xlab(NULL) +
+	             labs(y = gsub("\\.", " ", names(mean.sample)[k])) +
+	             scale_colour_futurama() +
+	             theme_classic() +
+               theme(legend.position = "none") +
+               theme(axis.text.x = element_blank(),axis.ticks = element_blank())  
+
+
+	# combine both plots 
+  skin.pad.mean <- skin.mean + pad.mean + plot_layout(width = c(3/6, 3/6), 
+                   guides = 'collect')  
+  print(skin.pad.mean)
+
+  # save to PDF
+	file_out <- paste0(file_path_sans_ext(info_in[["file"]]), "_skin_", names(mean.sample)[k],
+	            ".pdf")
+	ggsave(filename = file_out, plot = skin.pad.mean, path = dir_out, device = "pdf", 
+	       width = 300, height = 170, units = "mm")
+
+} 
+ 
+
+```
+
+
+## cow scapula & bone plate (with specific range per parameter) 
+### Sq
+```{r}
+  # plot cow scapula 
+  Sq_bone.mean <- ggplot(data = mean.sample[grep("cow scapula", 
+                  mean.sample[["Contact.material"]]), ], aes_string(x = "Sample", 
+                  y = "Sq.diff.mean", colour = "Sample")) + 
+                  geom_point(size = 4) +
+                  coord_cartesian(ylim = c(-2100, 3700)) +
+	                facet_wrap(Sample ~ Contact.material, nrow = 2) + 
+                  labs(title = "natural contact material") + 
+                  ylab("Sq [nm]") + xlab(NULL) +
+	                scale_colour_futurama() +
+	                theme_classic() +
+                  theme(legend.position = "none") +
+                  theme(axis.text.x = element_blank(),axis.ticks = element_blank())  
+ 
+   # plot bone plate 
+   Sq.plate.mean <- ggplot(data = mean.sample[grep("bone plate",
+                    mean.sample[["Contact.material"]]), ], aes_string(x = "Sample", 
+                    y = "Sq.diff.mean", colour = "Sample")) + 
+	                  geom_point(size = 4) +
+                    coord_cartesian(ylim = c(-2100, 3700)) +
+	                  facet_wrap(Sample ~ Contact.material, nrow = 2) + 
+                    labs(title = "artificial contact material") + 
+                    ylab(NULL) + xlab(NULL) +
+	                  scale_colour_futurama() +
+	                  theme_classic() +
+                    theme(legend.position = "none") +
+                    theme(axis.text.x = element_blank(),axis.ticks = element_blank())  
+ 
+	# combine both plots 
+  Sq.bone <- Sq_bone.mean + Sq.plate.mean + plot_layout(width = c(3/6, 3/6), 
+             guides = 'collect')  
+  print(Sq.bone)
+
+  # save to PDF
+	file_out <- paste0(file_path_sans_ext(info_in[["file"]]), "_Sq.bone.mean", ".pdf")
+	ggsave(filename = file_out, plot = Sq.bone, path = dir_out, device = "pdf", 
+	       width = 300, height = 170, units = "mm")
+
+
+```
+
+## cow scapula & bone plate (with specific range per parameter) 
+### Vmc
+```{r}
+  # plot cow scapula 
+  Vmc_bone.mean <- ggplot(data = mean.sample[grep("cow scapula", 
+                   mean.sample[["Contact.material"]]), ], aes_string(x = "Sample", 
+                   y = "Vmc.diff.mean", colour = "Sample")) + 
+                   geom_point(size = 4) +
+                   coord_cartesian(ylim = c(-2, 2.7)) +
+	                 facet_wrap(Sample ~ Contact.material, nrow = 2) + 
+                   labs(title = "natural contact material") + 
+                   ylab("Vmc [µm³/µm²]") + xlab(NULL) +
+	                 scale_colour_futurama() +
+	                 theme_classic() +
+                   theme(legend.position = "none") +
+                   theme(axis.text.x = element_blank(),axis.ticks = element_blank())  
+
+   # plot bone plate 
+   Vmc.plate.mean <- ggplot(data = mean.sample[grep("bone plate", 
+                     mean.sample[["Contact.material"]]), ], aes_string(x = "Sample", 
+                     y = "Vmc.diff.mean", colour = "Sample")) + 
+	                   geom_point(size = 4) +
+                     coord_cartesian(ylim = c(-2, 2.7)) +
+	                   facet_wrap(Sample ~ Contact.material, nrow = 2) + 
+                     labs(title = "artificial contact material") + 
+                     ylab(NULL) + xlab(NULL) +
+	                   scale_colour_futurama() +
+	                   theme_classic() +
+                     theme(legend.position = "none") +
+                     theme(axis.text.x = element_blank(),axis.ticks = element_blank())  
+ 
+	# combine both plots 
+  Vmc.bone <- Vmc_bone.mean + Vmc.plate.mean + plot_layout(width = c(3/6, 3/6),                           guides = 'collect')  
+  print(Vmc.bone)
+
+  # save to PDF
+	file_out <- paste0(file_path_sans_ext(info_in[["file"]]), "_Vmc.bone.mean", ".pdf")
+	ggsave(filename = file_out, plot = Vmc.bone, path = dir_out, device = "pdf", 
+	       width = 300, height = 170, units = "mm")
+
+
+```
+
+## cow scapula & bone plate (with specific range per parameter)
+### HAsfc9
+```{r}
+  # plot cow scapula
+  HAsfc9_bone.mean <- ggplot(data = mean.sample[grep("cow scapula", 
+                      mean.sample[["Contact.material"]]), ], aes_string(x = "Sample", 
+                      y = "HAsfc9.diff.mean", colour = "Sample")) + 
+                      geom_point(size = 4) +
+                      coord_cartesian(ylim = c(-0.5, 10.5)) +
+	                    facet_wrap(Sample ~ Contact.material, nrow = 2) + 
+                      labs(title = "natural contact material") + 
+                      ylab("HAsfc9") + xlab(NULL) +
+	                    scale_colour_futurama() +
+	                    theme_classic() +
+                      theme(legend.position = "none") +
+                      theme(axis.text.x = element_blank(),axis.ticks = element_blank())  
+	            
+   # plot bone plate 
+   HAsfc9.plate.mean <- ggplot(data = mean.sample[grep("bone plate", 
+                        mean.sample[["Contact.material"]]), ], aes_string(x = "Sample", 
+                        y = "HAsfc9.diff.mean", colour = "Sample")) + 
+	                      geom_point(size = 4) +
+                        coord_cartesian(ylim = c(-0.5, 10.5)) +
+	                      facet_wrap(Sample ~ Contact.material, nrow = 2) + 
+                        labs(title = "artificial contact material") + 
+                        ylab(NULL) + xlab(NULL) +
+	                      scale_colour_futurama() +
+	                      theme_classic() +
+                        theme(legend.position = "none") +
+                        theme(axis.text.x = element_blank(),axis.ticks = element_blank())  
+
+	# combine both plots 
+  HAsfc9.bone <- HAsfc9_bone.mean + HAsfc9.plate.mean + plot_layout(width = c(3/6, 3/6),
+                 guides = 'collect')  
+  print(HAsfc9.bone)
+
+  # save to PDF
+	file_out <- paste0(file_path_sans_ext(info_in[["file"]]), "_HAsfc9.bone.mean", ".pdf")
+	ggsave(filename = file_out, plot = HAsfc9.bone, path = dir_out, device = "pdf", 
+	       width = 300, height = 170, units = "mm")
+
+
+```
+
+## cow scapula & bone plate (with specific range per parameter)
+### epLsar
+```{r}
+  # plot cow scapula
+  epLsar_bone.mean <- ggplot(data = mean.sample[grep("cow scapula", 
+                      mean.sample[["Contact.material"]]), ], aes_string(x = "Sample", 
+                      y = "epLsar.diff.mean", colour = "Sample")) + 
+                      geom_point(size = 4) +
+                      coord_cartesian(ylim = c(-0.002, 0.004)) +
+	                    facet_wrap(Sample ~ Contact.material, nrow = 2) + 
+                      labs(title = "natural contact material") + 
+                      ylab("epLsar") + xlab(NULL) +
+	                    scale_colour_futurama() +
+	                    theme_classic() +
+                      theme(legend.position = "none") +
+                      theme(axis.text.x = element_blank(),axis.ticks = element_blank())  
+ 
+   # plot bone plate 
+   epLsar.plate.mean <- ggplot(data = mean.sample[grep("bone plate", 
+                        mean.sample[["Contact.material"]]), ], aes_string(x = "Sample", 
+                        y = "epLsar.diff.mean", colour = "Sample")) + 
+	                      geom_point(size = 4) +
+                        coord_cartesian(ylim = c(-0.002, 0.004)) +
+	                      facet_wrap(Sample ~ Contact.material, nrow = 2) + 
+                        labs(title = "artificial contact material") + 
+                        ylab(NULL) + xlab(NULL) +
+	                      scale_colour_futurama() +
+	                      theme_classic() +
+                        theme(legend.position = "none") +
+                        theme(axis.text.x = element_blank(),axis.ticks = element_blank())  
+
+	# combine both plots 
+  epLsar.bone <- epLsar_bone.mean + epLsar.plate.mean + plot_layout(width = c(3/6, 3/6),
+                 guides = 'collect')  
+  print(epLsar.bone)
+
+  # save to PDF
+	file_out <- paste0(file_path_sans_ext(info_in[["file"]]), "_epLsar.bone.mean", ".pdf")
+	ggsave(filename = file_out, plot = epLsar.bone, path = dir_out, device = "pdf", 
+	       width = 300, height = 170, units = "mm")
+
+
+```
+
+## cow scapula & bone plate (with specific range per parameter)
+### Asfc
+```{r}
+  # plot cow scapula
+  Asfc_bone.mean <- ggplot(data = mean.sample[grep("cow scapula", 
+                    mean.sample[["Contact.material"]]), ], aes_string(x = "Sample", 
+                    y = "Asfc.diff.mean", colour = "Sample")) + 
+                    geom_point(size = 4) +
+                    coord_cartesian(ylim = c(-16, 26)) +
+	                  facet_wrap(Sample ~ Contact.material, nrow = 2) + 
+                    labs(title = "natural contact material") + 
+                    ylab("Asfc") + xlab(NULL) +
+	                  scale_colour_futurama() +
+	                  theme_classic() +
+                    theme(legend.position = "none") +
+                    theme(axis.text.x = element_blank(),axis.ticks = element_blank())  
+ 
+   # plot bone plate 
+   Asfc.plate.mean <- ggplot(data = mean.sample[grep("bone plate", 
+                      mean.sample[["Contact.material"]]), ], aes_string(x = "Sample", 
+                      y = "Asfc.diff.mean", colour = "Sample")) + 
+	                    geom_point(size = 4) +
+                      coord_cartesian(ylim = c(-16, 26)) +
+	                    facet_wrap(Sample ~ Contact.material, nrow = 2) + 
+                      labs(title = "artificial contact material") + 
+                      ylab(NULL) + xlab(NULL) +
+	                    scale_colour_futurama() +
+	                    theme_classic() +
+                      theme(legend.position = "none") +
+                      theme(axis.text.x = element_blank(),axis.ticks = element_blank())  
+
+	# combine both plots 
+  Asfc.bone <- Asfc_bone.mean + Asfc.plate.mean + plot_layout(width = c(3/6, 3/6), 
+               guides = 'collect')  
+  print(Asfc.bone)
+
+  # save to PDF
+	file_out <- paste0(file_path_sans_ext(info_in[["file"]]), "_Asfc.bone.mean", ".pdf")
+	ggsave(filename = file_out, plot = Asfc.bone, path = dir_out, device = "pdf", 
+	       width = 300, height = 170, units = "mm")
+
+
+```
+
+## pig skin & skin pad (with specific range per parameter)
+### Sq
+```{r}
+  # plot pig skin 
+  Sq_skin.mean <- ggplot(data = mean.sample[grep("pig skin", 
+                  mean.sample[["Contact.material"]]), ], aes_string(x = "Sample",  
+                  y = "Sq.diff.mean", colour = "Sample")) + 
+                  geom_point(size = 4) +
+                  coord_cartesian(ylim = c(-2100, 3700)) +
+	                facet_wrap(Sample ~ Contact.material, nrow = 2) + 
+                  labs(title = "natural contact material") + 
+                  ylab("Sq [nm]") + xlab(NULL) +
+	                scale_colour_futurama() +
+	                theme_classic() +
+                  theme(legend.position = "none") +
+                  theme(axis.text.x = element_blank(),axis.ticks = element_blank())  
+	            
+   # plot skin pad 
+   Sq.pad.mean <- ggplot(data = mean.sample[grep("skin pad", 
+                  mean.sample[["Contact.material"]]), ], aes_string(x = "Sample", 
+                  y = "Sq.diff.mean", colour = "Sample")) + 
+	                geom_point(size = 4) +
+                  coord_cartesian(ylim = c(-2100, 3700)) +
+	                facet_wrap(Sample ~ Contact.material, nrow = 2) + 
+                  labs(title = "artificial contact material") + 
+                  ylab(NULL) + xlab(NULL) +
+	                scale_colour_futurama() +
+	                theme_classic() +
+                  theme(legend.position = "none") +
+                  theme(axis.text.x = element_blank(),axis.ticks = element_blank())  
+
+	# combine both plots 
+  Sq.skin <- Sq_skin.mean + Sq.pad.mean + plot_layout(width = c(3/6, 3/6), 
+             guides = 'collect')  
+  print(Sq.skin)
+
+  # save to PDF
+	file_out <- paste0(file_path_sans_ext(info_in[["file"]]), "_Sq.skin.mean", ".pdf")
+	ggsave(filename = file_out, plot = Sq.skin, path = dir_out, device = "pdf", 
+	       width = 300, height = 170, units = "mm")
+
+
+```
+
+## pig skin & skin pad (with specific range per parameter)
+### Vmc
+```{r}
+  # plot pig skin 
+  Vmc_skin.mean <- ggplot(data = mean.sample[grep("pig skin", 
+                   mean.sample[["Contact.material"]]), ], aes_string(x = "Sample", 
+                   y = "Vmc.diff.mean", colour = "Sample")) + 
+                   geom_point(size = 4) +
+                   coord_cartesian(ylim = c(-2, 2.7)) +
+	                 facet_wrap(Sample ~ Contact.material, nrow = 2) + 
+                   labs(title = "natural contact material") + 
+                   ylab("Vmc [µm³/µm²]") + xlab(NULL) +
+	                 scale_colour_futurama() +
+	                 theme_classic() +
+                   theme(legend.position = "none") +
+                   theme(axis.text.x = element_blank(),axis.ticks = element_blank())  
+	
+   # plot skin pad 
+   Vmc.pad.mean <- ggplot(data = mean.sample[grep("skin pad", 
+                   mean.sample[["Contact.material"]]), ], aes_string(x = "Sample", 
+                   y = "Vmc.diff.mean", colour = "Sample")) + 
+	                 geom_point(size = 4) +
+                   coord_cartesian(ylim = c(-2, 2.7)) +
+	                 facet_wrap(Sample ~ Contact.material, nrow = 2) + 
+                   labs(title = "artificial contact material") + 
+                   ylab(NULL) + xlab(NULL) +
+	                 scale_colour_futurama() +
+	                 theme_classic() +
+                   theme(legend.position = "none") +
+                   theme(axis.text.x = element_blank(),axis.ticks = element_blank())  
+
+	# combine both plots 
+  Vmc.skin <- Vmc_skin.mean + Vmc.pad.mean + plot_layout(width = c(3/6, 3/6), 
+              guides = 'collect')  
+  print(Vmc.skin)
+
+  # save to PDF
+	file_out <- paste0(file_path_sans_ext(info_in[["file"]]), "_Vmc.skin.mean", ".pdf")
+	ggsave(filename = file_out, plot = Vmc.skin, path = dir_out, device = "pdf", 
+	       width = 300, height = 170, units = "mm")
+
+
+```
+
+## pig skin & skin pad (with specific range per parameter)
+### HAsfc9
+```{r}
+  # plot pig skin 
+  HAsfc9_skin.mean <- ggplot(data = mean.sample[grep("pig skin", 
+                      mean.sample[["Contact.material"]]), ], aes_string(x = "Sample", 
+                      y = "HAsfc9.diff.mean", colour = "Sample")) + 
+                      geom_point(size = 4) +
+                      coord_cartesian(ylim = c(-0.5, 10.5)) +
+	                    facet_wrap(Sample ~ Contact.material, nrow = 2) + 
+                      labs(title = "natural contact material") + 
+                      ylab("HAsfc9") + xlab(NULL) +
+	                    scale_colour_futurama() +
+	                    theme_classic() +
+                      theme(legend.position = "none") +
+                      theme(axis.text.x = element_blank(),axis.ticks = element_blank())  
+	            
+   # plot skin pad 
+   HAsfc9.pad.mean <- ggplot(data = mean.sample[grep("skin pad", 
+                      mean.sample[["Contact.material"]]), ], aes_string(x = "Sample", 
+                      y = "HAsfc9.diff.mean", colour = "Sample")) + 
+	                    geom_point(size = 4) +
+                      coord_cartesian(ylim = c(-0.5, 10.5)) +
+	                    facet_wrap(Sample ~ Contact.material, nrow = 2) + 
+                      labs(title = "artificial contact material") + 
+                      ylab(NULL) + xlab(NULL) +
+	                    scale_colour_futurama() +
+	                    theme_classic() +
+                      theme(legend.position = "none") +
+                      theme(axis.text.x = element_blank(),axis.ticks = element_blank())  
+
+	# combine both plots 
+  HAsfc9.skin <- HAsfc9_skin.mean + HAsfc9.pad.mean + plot_layout(width = c(3/6, 3/6),
+                 guides = 'collect')  
+  print(HAsfc9.skin)
+
+  # save to PDF
+	file_out <- paste0(file_path_sans_ext(info_in[["file"]]), "_HAsfc9.skin.mean", ".pdf")
+	ggsave(filename = file_out, plot = HAsfc9.skin, path = dir_out, device = "pdf", 
+	       width = 300, height = 170, units = "mm")
+
+
+```
+
+## pig skin & skin pad (with specific range per parameter)
+### epLsar
+```{r}
+  # plot pig skin 
+  epLsar_skin.mean <- ggplot(data = mean.sample[grep("pig skin",  
+                      mean.sample[["Contact.material"]]), ], aes_string(x = "Sample", 
+                      y = "epLsar.diff.mean", colour = "Sample")) + 
+                      geom_point(size = 4) +
+                      coord_cartesian(ylim = c(-0.002, 0.004)) +
+	                    facet_wrap(Sample ~ Contact.material, nrow = 2) + 
+                      labs(title = "natural contact material") + 
+                      ylab("epLsar") + xlab(NULL) +
+	                    scale_colour_futurama() +
+	                    theme_classic() +
+                      theme(legend.position = "none") +
+                      theme(axis.text.x = element_blank(),axis.ticks = element_blank())  
+	            
+   # plot skin pad 
+   epLsar.pad.mean <- ggplot(data = mean.sample[grep("skin pad", 
+                      mean.sample[["Contact.material"]]), ], aes_string(x = "Sample", 
+                      y = "epLsar.diff.mean", colour = "Sample")) + 
+	                    geom_point(size = 4) +
+                      coord_cartesian(ylim = c(-0.002, 0.004)) +
+	                    facet_wrap(Sample ~ Contact.material, nrow = 2) + 
+                      labs(title = "artificial contact material") + 
+                      ylab(NULL) + xlab(NULL) +
+	                    scale_colour_futurama() +
+	                    theme_classic() +
+                      theme(legend.position = "none") +
+                      theme(axis.text.x = element_blank(),axis.ticks = element_blank())  
+
+	# combine both plots 
+  epLsar.skin <- epLsar_skin.mean + epLsar.pad.mean + plot_layout(width = c(3/6, 3/6),
+                 guides = 'collect')  
+  print(epLsar.skin)
+
+  # save to PDF
+	file_out <- paste0(file_path_sans_ext(info_in[["file"]]), "_epLsar.skin.mean", ".pdf")
+	ggsave(filename = file_out, plot = epLsar.skin, path = dir_out, device = "pdf", 
+	        width = 300, height = 170, units = "mm")
+
+
+```
+
+## pig skin & skin pad (with specific range per parameter)
+### Asfc
+```{r}
+  # plot pig skin 
+  Asfc_skin.mean <- ggplot(data = mean.sample[grep("pig skin", 
+                    mean.sample[["Contact.material"]]), ], aes_string(x = "Sample", 
+                    y = "Asfc.diff.mean", colour = "Sample")) + 
+                    geom_point(size = 4) +
+                    coord_cartesian(ylim = c(-16, 26)) +
+	                  facet_wrap(Sample ~ Contact.material, nrow = 2) + 
+                    labs(title = "natural contact material") + 
+                    ylab("Asfc") + xlab(NULL) +
+	                  scale_colour_futurama() +
+	                  theme_classic() +
+                    theme(legend.position = "none") +
+                    theme(axis.text.x = element_blank(),axis.ticks = element_blank())  
+	            
+   # plot skin pad 
+   Asfc.pad.mean <- ggplot(data = mean.sample[grep("skin pad", 
+                    mean.sample[["Contact.material"]]), ], aes_string(x = "Sample", 
+                    y = "Asfc.diff.mean", colour = "Sample")) + 
+	                  geom_point(size = 4) +
+                    coord_cartesian(ylim = c(-16, 26)) +
+	                  facet_wrap(Sample ~ Contact.material, nrow = 2) + 
+                    labs(title = "artificial contact material") + 
+                    ylab(NULL) + xlab(NULL) +
+	                  scale_colour_futurama() +
+	                  theme_classic() +
+                    theme(legend.position = "none") +
+                    theme(axis.text.x = element_blank(),axis.ticks = element_blank())  
+
+	# combine both plots 
+  Asfc.skin <- Asfc_skin.mean + Asfc.pad.mean + plot_layout(width = c(3/6, 3/6), 
+               guides = 'collect')  
+  print(Asfc.skin)
+
+  # save to PDF
+	file_out <- paste0(file_path_sans_ext(info_in[["file"]]), "_Asfc.skin.mean", ".pdf")
+	ggsave(filename = file_out, plot = Asfc.skin, path = dir_out, device = "pdf", 
+	       width = 300, height = 170, units = "mm")
+
+
+```
+
+
+# Principal component analysis 
+## PCA contact material - raw material seperated
+### flint
+```{r}
+# filter the data for flint only
+flint <- filter(imp_data, Raw.material == "flint") 
+
+# remove rows with na values 
+data_pca.flint <- na.omit(flint)
+# use for the PCA only selected variables: Sq, SSK, Vmc, Isotropy, Mean density of furrows,
+# Asfc, HAsfc9 
+flint.pca <- prcomp(data_pca.flint[ , c(9:10, 27, 32:33, 40, 42)], scale. = TRUE) 
+# convert the data into factor 
+data_pca.flint[["Contact.material"]] <- factor(data_pca.flint[["Contact.material"]])
+
+# using ggfortify
+PCA.flint <- autoplot(flint.pca, data = data_pca.flint, colour = "Contact.material", 
+             size = 2,
+             loadings = TRUE, loadings.colour = "black", loadings.label = TRUE,
+             loadings.label.colour = "black", 
+             loadings.label.size  = 4, loadings.label.repel = TRUE,  
+             frame.alpha = 0) + 
+             theme_classic() +
+             scale_colour_futurama() 
+         
+print(PCA.flint)
+
+# save the plot
+file_out <- paste0(file_path_sans_ext(info_in[["file"]]), "_PCA.flint_contact", ".pdf")
+ggsave(filename = file_out, plot = PCA.flint, path = dir_out, device = "pdf")
+
+```
+
+
+### lydite
+```{r}
+# filter the data for lydite only
+lydite <- filter(imp_data, Raw.material == "lydite") 
+
+# remove rows with na values 
+data_pca.lydite <- na.omit(lydite)
+# use for the PCA only selected variables: Sq, SSK, Vmc, Isotropy, Mean density of furrows,
+# Asfc, HAsfc9 
+lydite.pca <- prcomp(data_pca.lydite[ , c(9:10, 27, 32:33, 40, 42)], scale. = TRUE) 
+# convert the data into factor 
+data_pca.lydite[["Contact.material"]] <- factor(data_pca.lydite[["Contact.material"]])
+
+# using ggfortify
+PCA.lydite <- autoplot(lydite.pca, data = data_pca.lydite, colour = "Contact.material", 
+              size = 2,
+              loadings = TRUE, loadings.colour = "black", loadings.label = TRUE,
+              loadings.label.colour = "black", 
+              loadings.label.size  = 4, loadings.label.repel = TRUE,  
+              frame.alpha = 0) + 
+              theme_classic() +
+              scale_colour_futurama() 
+         
+print(PCA.lydite)
+
+# save the plot
+file_out <- paste0(file_path_sans_ext(info_in[["file"]]), "_PCA.lydite_contact", ".pdf")
+ggsave(filename = file_out, plot = PCA.lydite, path = dir_out, device = "pdf")
+
+```
+
+
+## PCA before and after - raw material seperated 
+### flint
+```{r}
+# using ggfortify
+PCA2_flint<- autoplot(flint.pca, data = data_pca.flint, colour = "Cycle", size = 2,
+             loadings = TRUE, loadings.colour = "black", loadings.label = TRUE, 
+             loadings.label.colour = "black", 
+             loadings.label.size  = 4, loadings.label.repel = TRUE,  
+             frame = TRUE, frame.type = "convex", frame.colour = "Cycle", frame.alpha = 0) +
+             theme_classic() +
+             scale_colour_manual(values = custom.col6$col)
+         
+print(PCA2_flint)
+
+# save the plot
+file_out <- paste0(file_path_sans_ext(info_in[["file"]]), "_PCA.flint_cycle", ".pdf")
+ggsave(filename = file_out, plot = PCA2_flint, path = dir_out, device = "pdf")
+  
+```
+
+
+### lydite
+```{r}
+# using ggfortify
+PCA2_lydite<- autoplot(lydite.pca, data = data_pca.lydite, colour = "Cycle", size = 2,
+              loadings = TRUE, loadings.colour = "black", loadings.label = TRUE, 
+              loadings.label.colour = "black", 
+              loadings.label.size  = 4, loadings.label.repel = TRUE,  
+              frame = TRUE, frame.type = "convex", frame.colour = "Cycle", 
+              frame.alpha = 0) +
+              theme_classic() +
+              scale_colour_manual(values = custom.col6$col)
+         
+print(PCA2_lydite)
+
+# save the plot
+file_out <- paste0(file_path_sans_ext(info_in[["file"]]), "_PCA.lydite_cycle", ".pdf")
+ggsave(filename = file_out, plot = PCA2_lydite, path = dir_out, device = "pdf")
+  
+```
+
+---
+
+# sessionInfo() and RStudio version
+
+```{r}
+sessionInfo()
+```
+
+RStudio version `r readLines("analysis_before.after/scripts/RStudioVersion.txt", n = 1)`.
+
+
+---
+
+# Cite R packages used
+```{r Citation}
+for (i in pack_to_load) print(citation(i), bibtex = FALSE)
+```
+
+
+
+---
+
+END OF SCRIPT
