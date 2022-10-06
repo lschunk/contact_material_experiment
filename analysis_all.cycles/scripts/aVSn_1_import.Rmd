@@ -5,6 +5,10 @@ date: "`r Sys.time()`"
 output:
   html_document:
     df_print: paged
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    number_sections: true
 ---
 
 
@@ -52,12 +56,6 @@ sapply(pack_to_load, library, character.only = TRUE, logical.return = TRUE)
 data_file <- list.files(dir_in, pattern = "\\.csv$", full.names = TRUE)
 md5_in <- md5sum(data_file)
 info_in <- data.frame(file = basename(names(md5_in)), checksum = md5_in, row.names = NULL)
-
-```
-
-The checksum (MD5 hashes) of the imported file are:  
-```{r, echo = FALSE}
-info_in
 
 ```
 

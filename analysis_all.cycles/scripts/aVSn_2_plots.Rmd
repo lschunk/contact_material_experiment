@@ -5,7 +5,10 @@ date: "`r Sys.time()`"
 output:
   html_document:
     df_print: paged
-  pdf_document: default
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    number_sections: true
 ---
 
 ---
@@ -54,12 +57,6 @@ info_in <- data.frame(file = basename(names(md5_in)), checksum = md5_in, row.nam
 
 ```
 
-
-The checksum (MD5 hashes) of the imported file is:  
-```{r, echo = FALSE}
-info_in
-
-```
 
 
 # Load data into R object
