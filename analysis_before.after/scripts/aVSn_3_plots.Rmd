@@ -5,6 +5,10 @@ date: "`r Sys.time()`"
 output:
   html_document:
     df_print: paged
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    number_sections: true
 ---
 
 ---
@@ -55,12 +59,6 @@ info_in <- data.frame(file = basename(names(md5_in)), checksum = md5_in,
 
 ```
 
-
-The checksum (MD5 hashes) of the imported file is:  
-```{r, echo = FALSE}
-info_in
-
-```
 
 
 # Load data into R object
@@ -136,14 +134,14 @@ for (j in num.var2){
   p_dif_skin <- ggplot(data = difference[grep("pig skin", difference[["Contact.material"]]),
                 ], aes_string(x = "Spot", names(difference)[j], colour = "Sample")) + 
 	              geom_jitter(size = 3, width = 0.25) +
-                theme(legend.position = "none") +
                 coord_cartesian(ylim = range_var) +
 	              facet_wrap(Sample ~ Contact.material, nrow = 2) + 
                 labs(title = "natural contact material") + 
                 ylab(names(difference)[j]) + xlab(NULL) +
 	              labs(y = gsub("\\.", " ", names(difference)[j])) +
 	              scale_colour_futurama() +
-	              theme_classic()
+	              theme_classic()+
+                theme(legend.position = "none") 
 
    # plot skin pad 
    p_dif_skin.pad <- ggplot(data = difference[grep("skin pad",
@@ -151,18 +149,18 @@ for (j in num.var2){
                      names(difference)[j], 
 	                   colour = "Sample")) + 
 	                   geom_jitter(size = 3, width = 0.25) +
-                     theme(legend.position = "none") +
+                     
                      coord_cartesian(ylim = range_var) +
 	                   facet_wrap(Sample ~ Contact.material, nrow = 2) + 
                      labs(title = "artificial contact material") + 
                      ylab(names(difference)[j]) + xlab(NULL) +
 	                   labs(y = gsub("\\.", " ", names(difference)[j])) +
 	                   scale_colour_futurama() +
-	                   theme_classic()
+	                   theme_classic() +
+                     theme(legend.position = "none") 
 
 	# combine both plots 
-  p_dif.skin <- p_dif_skin + p_dif_skin.pad + plot_layout(width = c(3/6, 3/6), 
-                guides = 'collect')  
+  p_dif.skin <- p_dif_skin + p_dif_skin.pad + plot_layout(width = c(3/6, 3/6))  
   print(p_dif.skin)
 
   # save to PDF
@@ -186,32 +184,31 @@ for (j in num.var2){
                 difference[["Contact.material"]]), ], aes_string(x = "Spot", 
                 names(difference)[j], colour = "Sample")) + 
 	              geom_jitter(size = 3, width = 0.25) +
-                theme(legend.position = "none") +
                 coord_cartesian(ylim = range_var) +
 	              facet_wrap(Sample ~ Contact.material, nrow = 2) + 
                 labs(title = "natural contact material") + 
                 ylab(names(difference)[j]) + xlab(NULL) +
 	              labs(y = gsub("\\.", " ", names(difference)[j])) +
 	              scale_colour_futurama() +
-	              theme_classic()
+	              theme_classic()+
+                theme(legend.position = "none") 
  
    # plot bone plate 
    p_dif_bone.plate <- ggplot(data = difference[grep("bone plate", 
                        difference[["Contact.material"]]), ], aes_string(x = "Spot", 
                        names(difference)[j], colour = "Sample")) + 
 	                     geom_jitter(size = 3, width = 0.25) +
-                       theme(legend.position = "none") +
                        coord_cartesian(ylim = range_var) +
 	                     facet_wrap(Sample ~ Contact.material, nrow = 2) + 
                        labs(title = "artificial contact material") + 
                        ylab(names(difference)[j]) + xlab(NULL) +
 	                     labs(y = gsub("\\.", " ", names(difference)[j])) +
 	                     scale_colour_futurama() +
-	                     theme_classic()
+	                     theme_classic()+
+                       theme(legend.position = "none") 
  
 	# combine both plots 
-  p_dif.bone <- p_dif_bone + p_dif_bone.plate + plot_layout(width = c(3/6, 3/6),
-                guides = 'collect')  
+  p_dif.bone <- p_dif_bone + p_dif_bone.plate + plot_layout(width = c(3/6, 3/6))  
   print(p_dif.bone)
 
   # save to PDF
@@ -274,8 +271,7 @@ for (k in num.var3){
 
 
 	# combine both plots 
-  bone.plate.mean <- bone.mean + plate.mean + plot_layout(width = c(3/6, 3/6),
-                     guides = 'collect')  
+  bone.plate.mean <- bone.mean + plate.mean + plot_layout(width = c(3/6, 3/6))  
   print(bone.plate.mean)
 
   # save to PDF
@@ -329,8 +325,7 @@ for (k in num.var3){
 
 
 	# combine both plots 
-  skin.pad.mean <- skin.mean + pad.mean + plot_layout(width = c(3/6, 3/6), 
-                   guides = 'collect')  
+  skin.pad.mean <- skin.mean + pad.mean + plot_layout(width = c(3/6, 3/6))  
   print(skin.pad.mean)
 
   # save to PDF
@@ -377,8 +372,7 @@ for (k in num.var3){
                     theme(axis.text.x = element_blank(),axis.ticks = element_blank())  
  
 	# combine both plots 
-  Sq.bone <- Sq_bone.mean + Sq.plate.mean + plot_layout(width = c(3/6, 3/6), 
-             guides = 'collect')  
+  Sq.bone <- Sq_bone.mean + Sq.plate.mean + plot_layout(width = c(3/6, 3/6))  
   print(Sq.bone)
 
   # save to PDF
@@ -421,7 +415,7 @@ for (k in num.var3){
                      theme(axis.text.x = element_blank(),axis.ticks = element_blank())  
  
 	# combine both plots 
-  Vmc.bone <- Vmc_bone.mean + Vmc.plate.mean + plot_layout(width = c(3/6, 3/6),                           guides = 'collect')  
+  Vmc.bone <- Vmc_bone.mean + Vmc.plate.mean + plot_layout(width = c(3/6, 3/6))  
   print(Vmc.bone)
 
   # save to PDF
@@ -464,8 +458,7 @@ for (k in num.var3){
                         theme(axis.text.x = element_blank(),axis.ticks = element_blank())  
 
 	# combine both plots 
-  HAsfc9.bone <- HAsfc9_bone.mean + HAsfc9.plate.mean + plot_layout(width = c(3/6, 3/6),
-                 guides = 'collect')  
+  HAsfc9.bone <- HAsfc9_bone.mean + HAsfc9.plate.mean + plot_layout(width = c(3/6, 3/6))  
   print(HAsfc9.bone)
 
   # save to PDF
@@ -508,8 +501,7 @@ for (k in num.var3){
                         theme(axis.text.x = element_blank(),axis.ticks = element_blank())  
 
 	# combine both plots 
-  epLsar.bone <- epLsar_bone.mean + epLsar.plate.mean + plot_layout(width = c(3/6, 3/6),
-                 guides = 'collect')  
+  epLsar.bone <- epLsar_bone.mean + epLsar.plate.mean + plot_layout(width = c(3/6, 3/6))  
   print(epLsar.bone)
 
   # save to PDF
@@ -552,8 +544,7 @@ for (k in num.var3){
                       theme(axis.text.x = element_blank(),axis.ticks = element_blank())  
 
 	# combine both plots 
-  Asfc.bone <- Asfc_bone.mean + Asfc.plate.mean + plot_layout(width = c(3/6, 3/6), 
-               guides = 'collect')  
+  Asfc.bone <- Asfc_bone.mean + Asfc.plate.mean + plot_layout(width = c(3/6, 3/6))  
   print(Asfc.bone)
 
   # save to PDF
@@ -596,8 +587,7 @@ for (k in num.var3){
                   theme(axis.text.x = element_blank(),axis.ticks = element_blank())  
 
 	# combine both plots 
-  Sq.skin <- Sq_skin.mean + Sq.pad.mean + plot_layout(width = c(3/6, 3/6), 
-             guides = 'collect')  
+  Sq.skin <- Sq_skin.mean + Sq.pad.mean + plot_layout(width = c(3/6, 3/6))  
   print(Sq.skin)
 
   # save to PDF
@@ -640,8 +630,7 @@ for (k in num.var3){
                    theme(axis.text.x = element_blank(),axis.ticks = element_blank())  
 
 	# combine both plots 
-  Vmc.skin <- Vmc_skin.mean + Vmc.pad.mean + plot_layout(width = c(3/6, 3/6), 
-              guides = 'collect')  
+  Vmc.skin <- Vmc_skin.mean + Vmc.pad.mean + plot_layout(width = c(3/6, 3/6))  
   print(Vmc.skin)
 
   # save to PDF
@@ -684,8 +673,7 @@ for (k in num.var3){
                       theme(axis.text.x = element_blank(),axis.ticks = element_blank())  
 
 	# combine both plots 
-  HAsfc9.skin <- HAsfc9_skin.mean + HAsfc9.pad.mean + plot_layout(width = c(3/6, 3/6),
-                 guides = 'collect')  
+  HAsfc9.skin <- HAsfc9_skin.mean + HAsfc9.pad.mean + plot_layout(width = c(3/6, 3/6))   
   print(HAsfc9.skin)
 
   # save to PDF
@@ -728,8 +716,7 @@ for (k in num.var3){
                       theme(axis.text.x = element_blank(),axis.ticks = element_blank())  
 
 	# combine both plots 
-  epLsar.skin <- epLsar_skin.mean + epLsar.pad.mean + plot_layout(width = c(3/6, 3/6),
-                 guides = 'collect')  
+  epLsar.skin <- epLsar_skin.mean + epLsar.pad.mean + plot_layout(width = c(3/6, 3/6))  
   print(epLsar.skin)
 
   # save to PDF
@@ -772,8 +759,7 @@ for (k in num.var3){
                     theme(axis.text.x = element_blank(),axis.ticks = element_blank())  
 
 	# combine both plots 
-  Asfc.skin <- Asfc_skin.mean + Asfc.pad.mean + plot_layout(width = c(3/6, 3/6), 
-               guides = 'collect')  
+  Asfc.skin <- Asfc_skin.mean + Asfc.pad.mean + plot_layout(width = c(3/6, 3/6))  
   print(Asfc.skin)
 
   # save to PDF
